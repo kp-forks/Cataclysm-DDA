@@ -9,6 +9,7 @@
 #include "type_id.h"
 
 class item;
+class map;
 
 struct tripoint;
 
@@ -38,8 +39,8 @@ class talker_item_const: public const_talker_cloner<talker_item_const>
         int posz() const override;
         tripoint pos() const override;
         tripoint_bub_ms pos_bub() const override;
-        tripoint_abs_ms global_pos() const override;
-        tripoint_abs_omt global_omt_location() const override;
+        tripoint_abs_ms pos_abs() const override;
+        tripoint_abs_omt pos_abs_omt() const override;
 
         std::optional<std::string> maybe_get_value( const std::string &var_name ) const override;
 
@@ -49,6 +50,7 @@ class talker_item_const: public const_talker_cloner<talker_item_const>
         bool will_talk_to_u( const Character &you, bool force ) const override;
 
         int get_cur_hp( const bodypart_id & ) const override;
+        int get_degradation() const override;
         int get_hp_max( const bodypart_id & ) const override;
         units::energy power_cur() const override;
         units::energy power_max() const override;
@@ -84,7 +86,8 @@ class talker_item: public talker_item_const, public talker_cloner<talker_item>
 
         void set_power_cur( units::energy value ) override;
         void set_all_parts_hp_cur( int ) override;
-        void die() override;
+        void set_degradation( int ) override;
+        void die( map *here ) override;
 
     private:
         item_location *me_it{};

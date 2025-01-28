@@ -272,7 +272,6 @@
     "type": "mapgen",
     "method": "json",
     "om_terrain": "s_grocery_roof",
-    "weight": 100,
     "object": {
       "fill_ter": "t_flat_roof",
       "rows": [
@@ -409,7 +408,7 @@
         "__#                  #__",
         "__#||||         -----#__",
         "__#T S|         - b  #__",
-        "__#L  + fffffff    ff#__",
+        "__#q  + fffffff    ff#__",
         "__####################__",
         "___4____________________",
         "________________________"
@@ -520,7 +519,7 @@
         "__#                  #__",
         "__#||||         -----#__",
         "__#T S|         - b  #__",
-        "__#L  + fffffff    ff#__",
+        "__#q  + fffffff    ff#__",
         "__####################__",
         "___4____________________",
         "________________________"
@@ -566,7 +565,6 @@
     "type": "mapgen",
     "method": "json",
     "om_terrain": "s_grocery_roof_1",
-    "weight": 100,
     "object": {
       "fill_ter": "t_flat_roof",
       "rows": [

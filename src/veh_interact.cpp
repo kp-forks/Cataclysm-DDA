@@ -178,10 +178,10 @@ player_activity veh_interact::serialize_activity()
     const vehicle_part *vpt = pt ? pt : &veh->part( 0 );
     map &here = get_map();
     for( const tripoint_bub_ms &p : veh->get_points( true ) ) {
-        res.coord_set.insert( here.getglobal( p ).raw() );
+        res.coord_set.insert( here.get_abs( p ) );
     }
-    res.values.push_back( here.getglobal( veh->pos_bub() ).x() + q.x() );   // values[0]
-    res.values.push_back( here.getglobal( veh->pos_bub() ).y() + q.y() );   // values[1]
+    res.values.push_back( here.get_abs( veh->pos_bub() ).x() + q.x() );   // values[0]
+    res.values.push_back( here.get_abs( veh->pos_bub() ).y() + q.y() );   // values[1]
     res.values.push_back( dd.x() );   // values[2]
     res.values.push_back( dd.y() );   // values[3]
     res.values.push_back( -dd.x() );   // values[4]
@@ -512,8 +512,8 @@ void veh_interact::do_main_loop()
         const int description_scroll_lines = catacurses::getmaxy( w_parts ) - 4;
         const std::string action = main_context.handle_input();
         msg.reset();
-        if( const std::optional<tripoint> vec = main_context.get_direction( action ) ) {
-            move_cursor( point_rel_ms( vec->xy() ) );
+        if( const std::optional<tripoint_rel_ms> vec = main_context.get_direction_rel_ms( action ) ) {
+            move_cursor( vec->xy() );
         } else if( action == "QUIT" ) {
             finish = true;
         } else if( action == "INSTALL" ) {
@@ -620,7 +620,7 @@ void veh_interact::cache_tool_availability()
 
 void veh_interact::cache_tool_availability_update_lifting( const tripoint_bub_ms &world_cursor_pos )
 {
-    max_lift = get_player_character().best_nearby_lifting_assist( world_cursor_pos.raw() );
+    max_lift = get_player_character().best_nearby_lifting_assist( world_cursor_pos );
 }
 
 /**
@@ -972,10 +972,10 @@ void veh_interact::do_install()
         return;
     }
 
-    restore_on_out_of_scope<std::optional<std::string>> prev_title( title );
+    restore_on_out_of_scope prev_title( title );
     title = _( "Choose new part to install here:" );
 
-    restore_on_out_of_scope<std::unique_ptr<install_info_t>> prev_install_info( std::move(
+    restore_on_out_of_scope prev_install_info( std::move(
                 install_info ) );
     install_info = std::make_unique<install_info_t>();
 
@@ -1152,14 +1152,14 @@ void veh_interact::do_repair()
         return;
     }
 
-    restore_on_out_of_scope<std::optional<std::string>> prev_title( title );
+    restore_on_out_of_scope prev_title( title );
     title = _( "Choose a part here to repair:" );
 
     shared_ptr_fast<ui_adaptor> current_ui = create_or_get_ui_adaptor();
 
     int pos = 0;
 
-    restore_on_out_of_scope<int> prev_hilight_part( highlight_part );
+    restore_on_out_of_scope prev_hilight_part( highlight_part );
 
     avatar &player_character = get_avatar();
     while( true ) {
@@ -1275,7 +1275,7 @@ void veh_interact::do_mend()
             break;
     }
 
-    restore_on_out_of_scope<std::optional<std::string>> prev_title( title );
+    restore_on_out_of_scope prev_title( title );
     title = _( "Choose a part here to mend:" );
 
     avatar &player_character = get_avatar();
@@ -1311,7 +1311,7 @@ void veh_interact::do_refill()
             break;
     }
 
-    restore_on_out_of_scope<std::optional<std::string>> prev_title( title );
+    restore_on_out_of_scope prev_title( title );
     title = _( "Select part to refill:" );
 
     auto act = [&]( const vehicle_part & pt ) {
@@ -1479,7 +1479,7 @@ void veh_interact::calc_overview()
             auto no_tank_details = []( const vehicle_part & pt, const catacurses::window & w, int y ) {
                 if( !pt.ammo_current().is_null() ) {
                     const itype *pt_ammo_cur = item::find_type( pt.ammo_current() );
-                    double vol_L = to_liter( pt.ammo_remaining() * units::legacy_volume_factor /
+                    double vol_L = to_liter( pt.ammo_remaining() * 250_ml /
                                              pt_ammo_cur->stack_size );
                     int offset = 1;
                     std::string fmtstring = "%s  %5.1fL";
@@ -1628,12 +1628,12 @@ void veh_interact::display_overview()
 void veh_interact::overview( const overview_enable_t &enable,
                              const overview_action_t &action )
 {
-    restore_on_out_of_scope<overview_enable_t> prev_overview_enable( overview_enable );
-    restore_on_out_of_scope<overview_action_t> prev_overview_action( overview_action );
+    restore_on_out_of_scope prev_overview_enable( overview_enable );
+    restore_on_out_of_scope prev_overview_action( overview_action );
     overview_enable = enable;
     overview_action = action;
 
-    restore_on_out_of_scope<int> prev_overview_pos( overview_pos );
+    restore_on_out_of_scope prev_overview_pos( overview_pos );
 
     shared_ptr_fast<ui_adaptor> current_ui = create_or_get_ui_adaptor();
 
@@ -1811,10 +1811,10 @@ void veh_interact::do_remove()
         return;
     }
 
-    restore_on_out_of_scope<std::optional<std::string>> prev_title( title );
+    restore_on_out_of_scope prev_title( title );
     title = _( "Choose a part here to remove:" );
 
-    restore_on_out_of_scope<std::unique_ptr<remove_info_t>> prev_remove_info( std::move(
+    restore_on_out_of_scope prev_remove_info( std::move(
                 remove_info ) );
     remove_info = std::make_unique<remove_info_t>();
 
@@ -1830,9 +1830,9 @@ void veh_interact::do_remove()
 
     shared_ptr_fast<ui_adaptor> current_ui = create_or_get_ui_adaptor();
 
-    restore_on_out_of_scope<overview_enable_t> prev_overview_enable( overview_enable );
+    restore_on_out_of_scope prev_overview_enable( overview_enable );
 
-    restore_on_out_of_scope<int> prev_hilight_part( highlight_part );
+    restore_on_out_of_scope prev_hilight_part( highlight_part );
 
     while( true ) {
         int part = parts_here[ pos ];
@@ -1911,7 +1911,7 @@ void veh_interact::do_siphon()
             break;
     }
 
-    restore_on_out_of_scope<std::optional<std::string>> prev_title( title );
+    restore_on_out_of_scope prev_title( title );
     title = _( "Select part to siphon:" );
 
     auto sel = [&]( const vehicle_part & pt ) {
@@ -2000,7 +2000,7 @@ void veh_interact::do_assign_crew()
         return;
     }
 
-    restore_on_out_of_scope<std::optional<std::string>> prev_title( title );
+    restore_on_out_of_scope prev_title( title );
     title = _( "Assign crew positions:" );
 
     auto sel = []( const vehicle_part & pt ) {
@@ -3053,8 +3053,8 @@ void veh_interact::complete_vehicle( Character &you )
         // so the vehicle could have lost some of its parts from other NPCS works
         // during this player/NPCs activity.
         // check the vehicle points that were stored at beginning of activity.
-        for( const tripoint &pt : you.activity.coord_set ) {
-            ovp = here.veh_at( here.bub_from_abs( tripoint_abs_ms( pt ) ) );
+        for( const tripoint_abs_ms &pt : you.activity.coord_set ) {
+            ovp = here.veh_at( here.get_bub( pt ) );
             if( ovp ) {
                 break;
             }

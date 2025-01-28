@@ -102,7 +102,7 @@ class outfit
         // will someone get shocked by zapback
         bool hands_conductive() const;
         bool can_pickVolume( const item &it, bool ignore_pkt_settings = true,
-                             bool is_pick_up_inv = false ) const;
+                             bool ignore_non_container_pocket = false ) const;
         side is_wearing_shoes( const bodypart_id &bp ) const;
         bool is_barefoot() const;
         item item_worn_with_flag( const flag_id &f, const bodypart_id &bp ) const;
@@ -263,7 +263,6 @@ class outfit
 };
 
 units::mass get_selected_stack_weight( const item *i, const std::map<const item *, int> &without );
-void post_absorbed_damage_enchantment_adjust( Character &guy, damage_unit &du );
 void destroyed_armor_msg( Character &who, const std::string &pre_damage_name );
 
 #endif // CATA_SRC_CHARACTER_ATTIRE_H

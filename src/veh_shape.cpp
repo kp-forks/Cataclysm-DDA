@@ -19,7 +19,7 @@ player_activity veh_shape::start( const tripoint_bub_ms &pos )
     on_out_of_scope cleanup( []() {
         get_map().invalidate_map_cache( get_avatar().view_offset.z() );
     } );
-    restore_on_out_of_scope<tripoint_rel_ms> view_offset_prev( you.view_offset );
+    restore_on_out_of_scope view_offset_prev( you.view_offset );
 
     cursor_allowed.clear();
     for( const vpart_reference &part : veh.get_all_parts() ) {
@@ -208,7 +208,7 @@ bool veh_shape::handle_cursor_movement( const std::string &action )
     if( action == "MOUSE_MOVE" || action == "TIMEOUT" ) {
         tripoint_rel_ms edge_scroll = g->mouse_edge_scrolling_terrain( ctxt );
         set_cursor_pos( get_cursor_pos() + edge_scroll );
-    } else if( const std::optional<tripoint> delta = ctxt.get_direction( action ) ) {
+    } else if( const std::optional<tripoint_rel_ms> delta = ctxt.get_direction_rel_ms( action ) ) {
         set_cursor_pos( get_cursor_pos() + *delta ); // move cursor with directional keys
     } else if( action == "zoom_in" ) {
         g->zoom_in();

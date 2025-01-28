@@ -14,6 +14,7 @@
 class computer;
 class faction;
 class item_location;
+class map;
 class mission;
 class monster;
 class npc;
@@ -100,10 +101,10 @@ class const_talker
         virtual tripoint_bub_ms pos_bub() const {
             return {};
         }
-        virtual tripoint_abs_ms global_pos() const {
+        virtual tripoint_abs_ms pos_abs() const {
             return {};
         }
-        virtual tripoint_abs_omt global_omt_location() const {
+        virtual tripoint_abs_omt pos_abs_omt() const {
             return {};
         }
         virtual std::string distance_to_goal() const {
@@ -127,6 +128,9 @@ class const_talker
             return 0;
         }
         virtual int get_cur_hp( const bodypart_id & ) const {
+            return 0;
+        }
+        virtual int get_degradation() const {
             return 0;
         }
         virtual int get_hp_max( const bodypart_id & ) const {
@@ -321,7 +325,7 @@ class const_talker
         virtual bool can_see() const {
             return false;
         }
-        virtual bool can_see_location( const tripoint & ) const {
+        virtual bool can_see_location( const tripoint_bub_ms & ) const {
             return false;
         }
         virtual bool is_mute() const {
@@ -493,6 +497,9 @@ class const_talker
         virtual int attack_speed() const {
             return 0;
         }
+        virtual int get_speed() const {
+            return 0;
+        }
         virtual dealt_damage_instance deal_damage( Creature *, bodypart_id,
                 const damage_instance & ) const {
             return dealt_damage_instance();
@@ -545,6 +552,9 @@ class const_talker
         virtual int focus_cur() const {
             return 0;
         }
+        virtual int focus_effective_cur() const {
+            return 0;
+        }
         virtual int get_pkill() const {
             return 0;
         }
@@ -591,6 +601,9 @@ class const_talker
             return 0;
         }
         virtual int get_npc_anger() const {
+            return 0;
+        }
+        virtual int get_ugliness() const {
             return 0;
         }
         virtual int get_bmi_permil() const {
@@ -775,9 +788,11 @@ class talker: virtual public const_talker
         virtual void set_npc_value( int ) {}
         virtual void set_npc_anger( int ) {}
         virtual void set_all_parts_hp_cur( int ) {}
-        virtual void die() {}
+        virtual void set_degradation( int ) {}
+        virtual void die( map * ) {}
         virtual void set_mana_cur( int ) {}
         virtual void mod_daily_health( int, int ) {}
+        virtual void mod_livestyle( int ) {}
         virtual void mod_focus( int ) {}
         virtual void set_pkill( int ) {}
         virtual void set_stamina( int ) {}

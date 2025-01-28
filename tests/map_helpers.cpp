@@ -29,6 +29,10 @@
 #include "submap.h"
 #include "type_id.h"
 
+static const itype_id itype_blindfold( "blindfold" );
+static const itype_id itype_medium_battery_cell( "medium_battery_cell" );
+static const itype_id itype_wearable_light_on( "wearable_light_on" );
+
 static const ter_str_id ter_t_grass( "t_grass" );
 static const ter_str_id ter_t_open_air( "t_open_air" );
 static const ter_str_id ter_t_rock( "t_rock" );
@@ -81,10 +85,11 @@ void clear_creatures()
 
 void clear_npcs()
 {
+    map &here = get_map();
     // Reload to ensure that all active NPCs are in the overmap_buffer.
     g->reload_npcs();
     for( npc &n : g->all_npcs() ) {
-        n.die( nullptr );
+        n.die( & here, nullptr );
     }
     g->cleanup_dead();
 }
@@ -128,7 +133,7 @@ void clear_basecamps()
 {
     std::optional<basecamp *> camp;
     do {
-        const tripoint_abs_omt &avatar_pos = get_avatar().global_omt_location();
+        const tripoint_abs_omt &avatar_pos = get_avatar().pos_abs_omt();
         camp = overmap_buffer.find_camp( avatar_pos.xy() );
         if( camp && *camp != nullptr ) {
             ( **camp ).remove_camp( avatar_pos );
@@ -139,14 +144,18 @@ void clear_basecamps()
 void clear_map( int zmin, int zmax )
 {
     map &here = get_map();
+    if( const tripoint_abs_sm &abs_sub = here.get_abs_sub(); abs_sub.z() != 0 ) {
+        // Reset z level to 0
+        here.load( tripoint_abs_sm( abs_sub.xy(), 0 ), false );
+    }
     // Clearing all z-levels is rather slow, so just clear the ones I know the
     // tests use for now.
     for( int z = zmin; z <= zmax; ++z ) {
         clear_fields( z );
     }
     clear_zones();
-    wipe_map_terrain();
     clear_npcs();
+    wipe_map_terrain();
     clear_creatures();
     here.clear_traps();
     for( int z = zmin; z <= zmax; ++z ) {
@@ -220,8 +229,8 @@ void build_water_test_map( const ter_id &surface, const ter_id &mid, const ter_i
 
 void player_add_headlamp()
 {
-    item headlamp( "wearable_light_on" );
-    item battery( "medium_battery_cell" );
+    item headlamp( itype_wearable_light_on );
+    item battery( itype_medium_battery_cell );
     battery.ammo_set( battery.ammo_default(), -1 );
     headlamp.put_in( battery, pocket_type::MAGAZINE_WELL );
     Character &you = get_player_character();
@@ -230,7 +239,7 @@ void player_add_headlamp()
 
 void player_wear_blindfold()
 {
-    item blindfold( "blindfold" );
+    item blindfold( itype_blindfold );
     Character &you = get_player_character();
     you.worn.wear_item( you, blindfold, false, true );
 }

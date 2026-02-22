@@ -4634,14 +4634,14 @@ int get_auto_consume_moves( Character &you, const bool food )
 }
 
 // Try to add fuel to a fire. Return true if there is both fire and fuel; return false otherwise.
-bool try_fuel_fire( player_activity &act, Character &you, const bool starting_fire )
+bool try_fuel_fire( Character &you, std::optional<tripoint_bub_ms> fire_target )
 {
     const tripoint_bub_ms pos = you.pos_bub();
     std::vector<tripoint_bub_ms> adjacent = closest_points_first( pos, 1, PICKUP_RANGE );
 
     map &here = get_map();
     std::optional<tripoint_bub_ms> best_fire =
-        starting_fire ? here.get_bub( act.placement ) : find_best_fire( adjacent, pos );
+        fire_target ? fire_target : find_best_fire( adjacent, pos );
 
     if( !best_fire || !here.accessible_items( *best_fire ) ) {
         return false;
@@ -4678,7 +4678,7 @@ bool try_fuel_fire( player_activity &act, Character &you, const bool starting_fi
 
     // Enough to sustain the fire
     // TODO: It's not enough in the rain
-    if( !starting_fire && ( fd.fuel_produced >= 1.0f || fire_age < 10_minutes ) ) {
+    if( !fire_target && ( fd.fuel_produced >= 1.0f || fire_age < 10_minutes ) ) {
         return true;
     }
 

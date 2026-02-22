@@ -9,6 +9,7 @@
 #include "avatar.h"
 #include "calendar.h"
 #include "cata_catch.h"
+#include "character_attire.h"
 #include "clzones.h"
 #include "coordinates.h"
 #include "enums.h"
@@ -24,12 +25,14 @@
 #include "type_id.h"
 #include "units.h"
 #include "vehicle.h"
+#include "visitable.h"
 #include "vpart_position.h"
 
 static const faction_id faction_your_followers( "your_followers" );
 
 static const itype_id itype_556( "556" );
 static const itype_id itype_ammolink223( "ammolink223" );
+static const itype_id itype_backpack( "backpack" );
 static const itype_id itype_belt223( "belt223" );
 static const itype_id itype_test_apple( "test_apple" );
 static const itype_id itype_test_bitter_almond( "test_bitter_almond" );
@@ -1265,4 +1268,155 @@ TEST_CASE( "zone_sorting_has_terrain_has_vehicle_helpers",
     CHECK( mgr.has_terrain( zone_type_LOOT_FOOD, pos_b ) );
     CHECK( !mgr.has_vehicle( zone_type_LOOT_FOOD, pos_b ) );
     CHECK( mgr.has( zone_type_LOOT_FOOD, pos_b ) );
+}
+
+// Batching should consolidate pickups from nearby sources before delivering.
+// Layout: player at S1 (UNSORTED, 10 apples), S2 one tile east (UNSORTED, 10
+// apples), D ten tiles south (LOOT_FOOD). After picking up from S1, the sorter
+// should detour to adjacent S2 (distance 1 < distance 10 to D) and pick up
+// there too, delivering all 20 apples to D in one trip.
+TEST_CASE( "zone_sorting_batches_nearby_sources",
+           "[zones][items][activities][sorting][batching]" )
+{
+    avatar &dummy = get_avatar();
+    map &here = get_map();
+
+    clear_avatar();
+    clear_map_without_vision();
+    zone_manager::get_manager().clear();
+
+    const tripoint_bub_ms s1_pos( 60, 60, 0 );
+    dummy.setpos( here, s1_pos );
+    dummy.clear_destination();
+    // Backpack so can_stash succeeds for batching capacity check
+    dummy.worn.wear_item( dummy, item( itype_backpack ), false, false );
+
+    // S1: player starts here, UNSORTED zone with 10 apples
+    const tripoint_abs_ms s1_abs = here.get_abs( s1_pos );
+    here.ter_set( s1_pos, ter_t_floor );
+    create_tile_zone( "Unsorted S1", zone_type_LOOT_UNSORTED, s1_abs );
+    for( int i = 0; i < 10; i++ ) {
+        here.add_item_or_charges( s1_pos, item( itype_test_apple ) );
+    }
+
+    // S2: one tile east, UNSORTED zone with 10 apples
+    const tripoint_bub_ms s2_pos = s1_pos + tripoint::east;
+    const tripoint_abs_ms s2_abs = here.get_abs( s2_pos );
+    here.ter_set( s2_pos, ter_t_floor );
+    create_tile_zone( "Unsorted S2", zone_type_LOOT_UNSORTED, s2_abs );
+    for( int i = 0; i < 10; i++ ) {
+        here.add_item_or_charges( s2_pos, item( itype_test_apple ) );
+    }
+
+    // D: ten tiles south, LOOT_FOOD destination
+    const tripoint_bub_ms dest_pos = s1_pos + tripoint( 0, 10, 0 );
+    const tripoint_abs_ms dest_abs = here.get_abs( dest_pos );
+    here.ter_set( dest_pos, ter_t_floor );
+    create_tile_zone( "Food", zone_type_LOOT_FOOD, dest_abs );
+
+    // Ensure clear floor along the path
+    for( int y = s1_pos.y() + 1; y < dest_pos.y(); ++y ) {
+        here.ter_set( tripoint_bub_ms( s1_pos.x(), y, 0 ), ter_t_floor );
+    }
+
+    REQUIRE( count_items_or_charges( s1_pos, itype_test_apple, std::nullopt ) == 10 );
+    REQUIRE( count_items_or_charges( s2_pos, itype_test_apple, std::nullopt ) == 10 );
+
+    here.invalidate_map_cache( 0 );
+    here.build_map_cache( 0, true );
+
+    dummy.assign_activity( zone_sort_activity_actor() );
+    process_activity( dummy );
+
+    // Both sources should be empty - proves batching detoured to S2
+    CHECK( count_items_or_charges( s1_pos, itype_test_apple, std::nullopt ) == 0 );
+    CHECK( count_items_or_charges( s2_pos, itype_test_apple, std::nullopt ) == 0 );
+    // Items are in player inventory (process_activity can't drive auto-move
+    // to a non-adjacent dest, so delivery doesn't complete in the test harness).
+    // The key assertion is that BOTH sources were emptied in one pass.
+    int carried = 0;
+    dummy.visit_items( [&carried]( const item * it, const item * ) {
+        if( it->typeId() == itype_test_apple ) {
+            carried++;
+        }
+        return VisitResponse::NEXT;
+    } );
+    CHECK( carried == 20 );
+}
+
+// Batching with a grabbed vehicle: the capacity check should consider the
+// cart's free volume, not just the player's inventory. With 10 apples per
+// source, items overflow into the cart when inventory fills up.
+TEST_CASE( "zone_sorting_batches_into_grabbed_vehicle",
+           "[zones][items][activities][sorting][batching][vehicle]" )
+{
+    avatar &dummy = get_avatar();
+    map &here = get_map();
+
+    clear_avatar();
+    clear_map_without_vision();
+    zone_manager::get_manager().clear();
+
+    const tripoint_bub_ms s1_pos( 60, 60, 0 );
+    dummy.setpos( here, s1_pos );
+    dummy.clear_destination();
+
+    // Spawn shopping cart south of player and grab it
+    const tripoint_bub_ms cart_pos = s1_pos + tripoint::south;
+    here.ter_set( cart_pos, ter_t_floor );
+    vehicle *cart = here.add_vehicle( vehicle_prototype_test_shopping_cart,
+                                      cart_pos, 0_degrees, 0, 0 );
+    REQUIRE( cart != nullptr );
+    cart->set_owner( dummy );
+    dummy.grab( object_type::VEHICLE, tripoint_rel_ms::south );
+    REQUIRE( dummy.get_grab_type() == object_type::VEHICLE );
+
+    // S1: player stands here, UNSORTED zone with 10 apples
+    const tripoint_abs_ms s1_abs = here.get_abs( s1_pos );
+    here.ter_set( s1_pos, ter_t_floor );
+    create_tile_zone( "Unsorted S1", zone_type_LOOT_UNSORTED, s1_abs );
+    for( int i = 0; i < 10; i++ ) {
+        here.add_item_or_charges( s1_pos, item( itype_test_apple ) );
+    }
+
+    // S2: one tile east, UNSORTED zone with 10 apples
+    const tripoint_bub_ms s2_pos = s1_pos + tripoint::east;
+    const tripoint_abs_ms s2_abs = here.get_abs( s2_pos );
+    here.ter_set( s2_pos, ter_t_floor );
+    create_tile_zone( "Unsorted S2", zone_type_LOOT_UNSORTED, s2_abs );
+    for( int i = 0; i < 10; i++ ) {
+        here.add_item_or_charges( s2_pos, item( itype_test_apple ) );
+    }
+
+    // D: ten tiles south-west, LOOT_FOOD destination (far away)
+    const tripoint_bub_ms dest_pos = s1_pos + tripoint( -5, 10, 0 );
+    const tripoint_abs_ms dest_abs = here.get_abs( dest_pos );
+    here.ter_set( dest_pos, ter_t_floor );
+    create_tile_zone( "Food", zone_type_LOOT_FOOD, dest_abs );
+
+    REQUIRE( count_items_or_charges( s1_pos, itype_test_apple, std::nullopt ) == 10 );
+    REQUIRE( count_items_or_charges( s2_pos, itype_test_apple, std::nullopt ) == 10 );
+
+    here.invalidate_map_cache( 0 );
+    here.build_map_cache( 0, true );
+
+    dummy.assign_activity( zone_sort_activity_actor() );
+    process_activity( dummy );
+
+    // Both sources should be empty - batching used cart volume for capacity
+    CHECK( count_items_or_charges( s1_pos, itype_test_apple, std::nullopt ) == 0 );
+    CHECK( count_items_or_charges( s2_pos, itype_test_apple, std::nullopt ) == 0 );
+    // Items are in cart cargo and/or player inventory
+    int total = 0;
+    dummy.visit_items( [&total]( const item * it, const item * ) {
+        if( it->typeId() == itype_test_apple ) {
+            total++;
+        }
+        return VisitResponse::NEXT;
+    } );
+    std::optional<vpart_reference> cargo = here.veh_at( cart_pos ).cargo();
+    if( cargo.has_value() ) {
+        total += count_items_or_charges( cart_pos, itype_test_apple, cargo );
+    }
+    CHECK( total == 20 );
 }

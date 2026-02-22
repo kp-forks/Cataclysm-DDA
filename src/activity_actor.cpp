@@ -12719,6 +12719,7 @@ bool zone_sort_activity_actor::stage_think( player_activity &act, Character &you
 
     num_processed = 0;
     virtual_pickup_active = false;
+    picked_up_this_pass = false;
     // Clear stale state from previous source. Fresh destinations are computed
     // in stage_do when items are picked up from the new source.
     dropoff_coords.clear();
@@ -13082,6 +13083,9 @@ void zone_sort_activity_actor::stage_do( player_activity &act, Character &you )
     const std::optional<vpart_reference> vp = here.veh_at( src_bub ).cargo();
     // Track whether any sortable item failed pickup due to carry/cart capacity.
     bool cart_or_carry_blocked = false;
+    // picked_up_this_pass is a member variable that persists across do_turn
+    // calls so batching still fires when move exhaustion splits pickup and
+    // batching into separate turns. Reset after the batching check evaluates.
     //Skip items that have already been processed
     for( zone_sorting::zone_items::iterator it = items.begin() + num_processed; it < items.end();
          ++it ) {
@@ -13304,6 +13308,7 @@ void zone_sort_activity_actor::stage_do( player_activity &act, Character &you )
 
         // OK, we can sort this!
         picked_up_stuff.emplace_back( thisitem_loc );
+        picked_up_this_pass = true;
         // out of moves or item was unloaded
         if( you.get_moves() <= 0 || *move_and_reset ) {
             return;
@@ -13351,6 +13356,133 @@ void zone_sort_activity_actor::stage_do( player_activity &act, Character &you )
             stage = THINK;
             dropoff_coords.clear();
             return;
+        }
+
+        // Batching: check if any unvisited source is strictly closer than
+        // the nearest destination and has compatible items we can carry.
+        // If so, detour there first to batch pickups into one delivery trip.
+        // Only attempt if we actually picked something up this call (freeze gate).
+        if( picked_up_this_pass ) {
+            int dest_dist = INT_MAX;
+            for( const tripoint_abs_ms &dest : dropoff_coords ) {
+                dest_dist = std::min( dest_dist, square_dist( abspos, dest ) );
+            }
+
+            // Pre-fetch cart cargo for per-item volume check
+            std::optional<vpart_reference> batch_cart_vp;
+            if( you.is_avatar() && you.as_avatar()->get_grab_type() == object_type::VEHICLE ) {
+                const tripoint_bub_ms cart_pos = you.pos_bub() + you.as_avatar()->grab_point;
+                batch_cart_vp = here.veh_at( cart_pos ).cargo();
+            }
+
+            // Build distance-sorted candidates, mirroring THINK's filters
+            std::vector<std::pair<int, tripoint_abs_ms>> batch_candidates;
+            for( const tripoint_abs_ms &candidate : coord_set ) {
+                if( candidate == src ) {
+                    continue;
+                }
+                if( unreachable_sources.count( candidate ) ) {
+                    continue;
+                }
+                const tripoint_bub_ms cand_bub = here.get_bub( candidate );
+                if( !here.inbounds( cand_bub ) ) {
+                    continue;
+                }
+                if( zone_sorting::ignore_zone_position( you, candidate,
+                                                        zone_sorting::ignore_contents( you, candidate ) ) ) {
+                    continue;
+                }
+                const int cand_dist = square_dist( abspos, candidate );
+                if( cand_dist >= dest_dist ) {
+                    continue;
+                }
+                batch_candidates.emplace_back( cand_dist, candidate );
+            }
+            std::sort( batch_candidates.begin(), batch_candidates.end(),
+                       []( const std::pair<int, tripoint_abs_ms> &a,
+            const std::pair<int, tripoint_abs_ms> &b ) {
+                return a.first < b.first;
+            } );
+
+            bool should_batch = false;
+            tripoint_abs_ms batch_target;
+            for( const auto &[cand_dist, candidate] : batch_candidates ) {
+                const tripoint_bub_ms cand_bub = here.get_bub( candidate );
+                const bool cand_has_terrain_unsorted =
+                    mgr.has_terrain( zone_type_LOOT_UNSORTED, candidate, fac_id );
+                const bool cand_has_vehicle_unsorted =
+                    mgr.has_vehicle( zone_type_LOOT_UNSORTED, candidate, fac_id );
+
+                for( const auto &[it, from_veh] : zone_sorting::populate_items( cand_bub ) ) {
+                    // Source binding filter (mirrors DO item loop)
+                    if( from_veh && !cand_has_vehicle_unsorted ) {
+                        continue;
+                    }
+                    if( !from_veh && !cand_has_terrain_unsorted ) {
+                        continue;
+                    }
+                    if( zone_sorting::sort_skip_item( you, it, other_activity_items,
+                                                      mgr.has( zone_type_LOOT_IGNORE_FAVORITES, candidate, fac_id ),
+                                                      candidate, from_veh ) ) {
+                        continue;
+                    }
+                    // Destination compatibility: exact zone-type match
+                    const zone_type_id cand_zt = mgr.get_near_zone_type_for_item(
+                                                     *it, abspos, MAX_VIEW_DISTANCE, fac_id );
+                    if( cand_zt == zone_type_id::NULL_ID() ) {
+                        continue;
+                    }
+                    bool shares_dest = false;
+                    for( const tripoint_abs_ms &possible_dest : dropoff_coords ) {
+                        if( mgr.get_near_zone_type_for_item( *it, possible_dest, 0,
+                                                             fac_id ) == cand_zt ) {
+                            shares_dest = true;
+                            break;
+                        }
+                    }
+                    if( !shares_dest ) {
+                        continue;
+                    }
+                    // Per-item capacity check
+                    bool fits = false;
+                    if( batch_cart_vp &&
+                        batch_cart_vp->items().free_volume() >= it->volume() ) {
+                        fits = true;
+                    }
+                    if( !fits && you.can_stash( *it ) ) {
+                        fits = true;
+                    }
+                    if( fits ) {
+                        should_batch = true;
+                        batch_target = candidate;
+                        break;
+                    }
+                }
+                if( should_batch ) {
+                    break;
+                }
+            }
+
+            if( should_batch ) {
+                add_msg_debug( debugmode::DF_ACTIVITY,
+                               "zone_sort DO: batching - detour to (%d,%d,%d) before delivery",
+                               batch_target.x(), batch_target.y(), batch_target.z() );
+                placement = batch_target;
+                num_processed = 0;
+                if( square_dist( abspos, batch_target ) <= 1 ) {
+                    // Already adjacent, re-enter DO to process batch target
+                    return;
+                }
+                if( zone_sorting::route_to_destination( you, act,
+                                                        here.get_bub( batch_target ), stage ) ) {
+                    return;
+                }
+                // Can't reach batch target, mark unreachable and fall through to delivery
+                unreachable_sources.emplace( batch_target );
+            }
+            // Reset after evaluation. Prevents infinite loops when a batch
+            // target has no pickable items (zero moves consumed per cycle).
+            picked_up_this_pass = false;
         }
 
         bool match = false;

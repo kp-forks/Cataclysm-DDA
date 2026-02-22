@@ -4083,6 +4083,9 @@ class zone_sort_activity_actor : public zone_activity_actor
         // Forces a clear on first stage_think call (fresh construction or deserialization).
         // Avoids edge case where default-initialized values match real game state.
         bool force_clear_unreachable = true; // NOLINT(cata-serialize)
+        // Persists across do_turn calls so batching fires even when the initial
+        // pickup exhausted moves. Reset after the batching check evaluates.
+        bool picked_up_this_pass = false; // NOLINT(cata-serialize)
 
         // Returns all picked up items to the source tile and clears sorting state.
         // Used when routing to a destination fails.

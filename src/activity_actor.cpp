@@ -11289,7 +11289,7 @@ void fire_start_activity_actor::do_turn( player_activity &act, Character &who )
     map &here = get_map();
     tripoint_bub_ms where = here.get_bub( fire_placement );
     if( !here.is_flammable( where ) ) {
-        try_fuel_fire( act, who, true );
+        try_fuel_fire( who, where );
         if( !here.is_flammable( where ) ) {
             if( here.has_flag_ter( ter_furn_flag::TFLAG_DEEP_WATER, where ) ||
                 here.has_flag_ter( ter_furn_flag::TFLAG_SHALLOW_WATER, where ) ) {

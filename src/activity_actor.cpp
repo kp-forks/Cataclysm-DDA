@@ -13154,15 +13154,11 @@ void zone_sort_activity_actor::stage_do( player_activity &act, Character &you )
         }
     }
 
-    // Rotate virtual-batch state when a batch has been fully delivered.
+    // Reset iteration state when a batch has been fully delivered.
     // Must happen before items.begin() + num_processed arithmetic below.
-    bool had_virtual_batch = false;
     if( picked_up_stuff.empty() ) {
-        had_virtual_batch = virtual_pickup_active;
         virtual_pickup_active = false;
-        if( had_virtual_batch ) {
-            num_processed = 0;
-        }
+        num_processed = 0;
     }
 
     bool is_adjacent_or_closer = square_dist( you.pos_bub(), src_bub ) <= 1;

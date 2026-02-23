@@ -1762,3 +1762,97 @@ TEST_CASE( "zone_sorting_terrain_zone_vehicle_cargo_no_loop",
     // No duplication on ground
     CHECK( count_items_or_charges( src_pos, itype_test_apple, std::nullopt ) == 0 );
 }
+
+// When source has items going to different zone types (FOOD vs DRINK), the
+// activity should sort ALL of them across multiple internal passes, not just
+// the first batch. The bug: after delivering one batch, num_processed is not
+// reset when picked_up_stuff empties. The repopulated items list is shorter
+// (delivered items removed), so the stale offset overshoots and the remaining
+// items are never seen. The source gets erased and the activity terminates
+// with "sorted out every item possible" while items still remain.
+TEST_CASE( "zone_sorting_multi_dest_processes_all_items",
+           "[zones][items][activities][sorting]" )
+{
+    avatar &dummy = get_avatar();
+    map &here = get_map();
+
+    clear_avatar();
+    clear_map_without_vision();
+    zone_manager::get_manager().clear();
+
+    // Layout: dest1 is 1 tile north of source, player 1 tile south.
+    // When the sort picks up the first item (apple, destined for PFOOD
+    // at dest1) and routes to adjacent(dest1), the A* finds source tile
+    // (60,60) as the closest qualifying neighbor. The player teleports
+    // there, drops the apple at dest1, and resumes stage_do still
+    // adjacent to source. The stale num_processed offset (incremented
+    // when the second item was skipped for having a different dest)
+    // causes the items loop to start past the remaining item.
+    //
+    //   dest1 (PFOOD)    (60,59)
+    //   source (UNSORTED) (60,60)   <-- A* endpoint: adj to dest1
+    //   player start      (60,61)
+    //
+    //   dest2 (FOOD) far away at (55,60)
+
+    const tripoint_bub_ms start_pos( 60, 61, 0 );
+    dummy.setpos( here, start_pos );
+    dummy.clear_destination();
+
+    const tripoint_bub_ms src_pos( 60, 60, 0 );
+    here.ter_set( src_pos, ter_t_floor );
+    create_tile_zone( "Unsorted", zone_type_LOOT_UNSORTED, here.get_abs( src_pos ) );
+
+    // PFOOD dest: 1 tile north of source. Route from player (60,61) to
+    // adj(60,59) finds source (60,60) as closest qualifying tile (dist 1).
+    // Player ends up at source after delivery -- still adjacent, no THINK reset.
+    const tripoint_bub_ms pfood_pos( 60, 59, 0 );
+    here.ter_set( pfood_pos, ter_t_floor );
+    create_tile_zone( "PFood", zone_type_LOOT_PFOOD, here.get_abs( pfood_pos ) );
+
+    // FOOD dest: far away so it's not adjacent from the delivery endpoint
+    const tripoint_bub_ms food_pos( 55, 60, 0 );
+    here.ter_set( food_pos, ter_t_floor );
+    create_tile_zone( "Food", zone_type_LOOT_FOOD, here.get_abs( food_pos ) );
+
+    // test_apple -> LOOT_PFOOD (perishable), test_bitter_almond -> LOOT_FOOD
+    here.add_item_or_charges( src_pos, item( itype_test_apple ) );
+    here.add_item_or_charges( src_pos, item( itype_test_bitter_almond ) );
+    REQUIRE( count_items_or_charges( src_pos, itype_test_apple, std::nullopt ) == 1 );
+    REQUIRE( count_items_or_charges( src_pos, itype_test_bitter_almond, std::nullopt ) == 1 );
+
+    here.invalidate_map_cache( 0 );
+    here.build_map_cache( 0, true );
+
+    dummy.assign_activity( zone_sort_activity_actor() );
+
+    // Simulate auto-move via teleport. route_to_destination nulls the activity
+    // and sets destination_point; we teleport there and restart.
+    int teleports = 0;
+    const int max_teleports = 30;
+    do {
+        int turns = 0;
+        while( dummy.activity && turns < 200 ) {
+            dummy.mod_moves( dummy.get_speed() );
+            while( dummy.get_moves() > 0 && dummy.activity ) {
+                dummy.activity.do_turn( dummy );
+            }
+            turns++;
+        }
+        if( dummy.destination_point ) {
+            dummy.setpos( here, here.get_bub( *dummy.destination_point ) );
+            if( dummy.has_destination_activity() ) {
+                dummy.start_destination_activity();
+            } else {
+                dummy.clear_destination();
+            }
+            teleports++;
+        }
+    } while( ( dummy.activity || dummy.destination_point ) && teleports < max_teleports );
+
+    REQUIRE( teleports < max_teleports );
+
+    // Both items should be gone from source - sorted to their destinations
+    CHECK( count_items_or_charges( src_pos, itype_test_apple, std::nullopt ) == 0 );
+    CHECK( count_items_or_charges( src_pos, itype_test_bitter_almond, std::nullopt ) == 0 );
+}

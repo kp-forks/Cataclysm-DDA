@@ -620,7 +620,7 @@
     "id": "TALK_EXODII_MERCHANT_mission_2_complete_double_crossed_lie_truth",
     "type": "talk_topic",
     "dynamic_line": {
-      "//~": "Aye?",
+      "//~": "Alas.  You're a mercenary, so you'll act like a mercenary.  But you better remember that the Exodii also remember.",
       "str": "*looks you up and down, sizing you up fully before speaking in a matter-of-fact tone.  \"Alas and alack.  A pop-an-work you'n be, a pop-an-work you'n do.  Now, ye remember this… the Exodii remembers, aye?\""
     },
     "responses": [

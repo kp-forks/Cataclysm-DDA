@@ -13154,15 +13154,11 @@ void zone_sort_activity_actor::stage_do( player_activity &act, Character &you )
         }
     }
 
-    // Rotate virtual-batch state when a batch has been fully delivered.
+    // Reset iteration state when a batch has been fully delivered.
     // Must happen before items.begin() + num_processed arithmetic below.
-    bool had_virtual_batch = false;
     if( picked_up_stuff.empty() ) {
-        had_virtual_batch = virtual_pickup_active;
         virtual_pickup_active = false;
-        if( had_virtual_batch ) {
-            num_processed = 0;
-        }
+        num_processed = 0;
     }
 
     bool is_adjacent_or_closer = square_dist( you.pos_bub(), src_bub ) <= 1;
@@ -13211,7 +13207,7 @@ void zone_sort_activity_actor::stage_do( player_activity &act, Character &you )
         }
 
         if( zone_sorting::sort_skip_item( you, it->first, other_activity_items,
-                                          mgr.has( zone_type_LOOT_IGNORE_FAVORITES, src, fac_id ), src, it->second ) ) {
+                                          mgr.has( zone_type_LOOT_IGNORE_FAVORITES, src, fac_id ), src ) ) {
             continue;
         }
 
@@ -13544,7 +13540,7 @@ void zone_sort_activity_actor::stage_do( player_activity &act, Character &you )
                     }
                     if( zone_sorting::sort_skip_item( you, it, other_activity_items,
                                                       mgr.has( zone_type_LOOT_IGNORE_FAVORITES, candidate, fac_id ),
-                                                      candidate, from_veh ) ) {
+                                                      candidate ) ) {
                         continue;
                     }
                     // Destination compatibility: exact zone-type match

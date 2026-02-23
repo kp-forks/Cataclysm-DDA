@@ -13211,7 +13211,7 @@ void zone_sort_activity_actor::stage_do( player_activity &act, Character &you )
         }
 
         if( zone_sorting::sort_skip_item( you, it->first, other_activity_items,
-                                          mgr.has( zone_type_LOOT_IGNORE_FAVORITES, src, fac_id ), src, it->second ) ) {
+                                          mgr.has( zone_type_LOOT_IGNORE_FAVORITES, src, fac_id ), src ) ) {
             continue;
         }
 
@@ -13544,7 +13544,7 @@ void zone_sort_activity_actor::stage_do( player_activity &act, Character &you )
                     }
                     if( zone_sorting::sort_skip_item( you, it, other_activity_items,
                                                       mgr.has( zone_type_LOOT_IGNORE_FAVORITES, candidate, fac_id ),
-                                                      candidate, from_veh ) ) {
+                                                      candidate ) ) {
                         continue;
                     }
                     // Destination compatibility: exact zone-type match

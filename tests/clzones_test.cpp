@@ -1696,3 +1696,69 @@ TEST_CASE( "zone_sorting_vehicle_dest_cargo_full_ground_fallback",
     CHECK( count_items_or_charges( cart_pos, itype_test_apple, std::nullopt ) == 0 );
     CHECK( !dummy.activity );
 }
+
+// When a terrain-bound zone (e.g. LOOT_FOOD) sits on a tile with a vehicle
+// appliance (e.g. fridge/cart), items in vehicle cargo should be recognized as
+// "already sorted" and not re-picked. Without the fix, sort_skip_item only
+// checks has_terrain for ground items and has_vehicle for cargo items, so cargo
+// items at a terrain-bound zone are never skipped, causing an infinite loop.
+TEST_CASE( "zone_sorting_terrain_zone_vehicle_cargo_no_loop",
+           "[zones][items][activities][sorting][vehicle]" )
+{
+    avatar &dummy = get_avatar();
+    map &here = get_map();
+
+    clear_avatar();
+    clear_map_without_vision();
+    zone_manager::get_manager().clear();
+
+    const tripoint_bub_ms start_pos( 60, 60, 0 );
+    dummy.setpos( here, start_pos );
+    dummy.clear_destination();
+
+    // Cart south of player with terrain-bound UNSORTED + LOOT_FOOD zones
+    const tripoint_bub_ms src_pos = start_pos + tripoint::south;
+    const tripoint_abs_ms src_abs = here.get_abs( src_pos );
+    here.ter_set( src_pos, ter_t_floor );
+
+    vehicle *cart = here.add_vehicle( vehicle_prototype_test_shopping_cart,
+                                      src_pos, 0_degrees, 0, 0 );
+    REQUIRE( cart != nullptr );
+    cart->set_owner( dummy );
+    dummy.grab( object_type::VEHICLE, tripoint_rel_ms::south );
+
+    // Terrain-bound zones (default veh=false). This is the bug scenario:
+    // zone binding is terrain, but items are in vehicle cargo.
+    create_tile_zone( "Unsorted", zone_type_LOOT_UNSORTED, src_abs );
+    create_tile_zone( "Food", zone_type_LOOT_FOOD, src_abs );
+
+    // Place food in cart cargo
+    std::optional<vpart_reference> cargo = here.veh_at( src_pos ).cargo();
+    REQUIRE( cargo.has_value() );
+    cargo->vehicle().add_item( here, cargo->part(), item( itype_test_apple ) );
+    REQUIRE( count_items_or_charges( src_pos, itype_test_apple, cargo ) == 1 );
+
+    here.invalidate_map_cache( 0 );
+    here.build_map_cache( 0, true );
+
+    dummy.assign_activity( zone_sort_activity_actor() );
+
+    // Bounded loop: process_activity would hang on the infinite loop bug
+    int turns = 0;
+    const int max_turns = 20;
+    do {
+        dummy.mod_moves( dummy.get_speed() );
+        while( dummy.get_moves() > 0 && dummy.activity ) {
+            dummy.activity.do_turn( dummy );
+        }
+        turns++;
+    } while( dummy.activity && turns < max_turns );
+
+    REQUIRE( turns < max_turns );
+    CHECK( !dummy.activity );
+
+    // Food stays in cart cargo (recognized as already at LOOT_FOOD destination)
+    CHECK( count_items_or_charges( src_pos, itype_test_apple, cargo ) == 1 );
+    // No duplication on ground
+    CHECK( count_items_or_charges( src_pos, itype_test_apple, std::nullopt ) == 0 );
+}

@@ -4540,21 +4540,14 @@
     "category": [ "RAPTOR" ],
     "types": [ "MUZZLE" ],
     "prereqs": [ "SNOUT" ],
-    "points": -3,
+    "points": 0,
     "mixed_effect": true,
     "vitamin_cost": 160,
     "visibility": 8,
     "ugliness": 8,
     "restricts_gear": [ "mouth" ],
     "social_modifiers": { "intimidate": 20 },
-    "attacks": {
-      "attack_text_u": "You dart your head and snap at %s!",
-      "attack_text_npc": "%1$s darts their head and snaps at %2$s!",
-      "blocker_mutations": [ "FANGS" ],
-      "body_part": "mouth",
-      "chance": 18,
-      "base_damage": { "damage_type": "stab", "amount": 18 }
-    }
+    "enchantments": [ { "modified_bodyparts": [ { "lose": "mouth" }, { "gain": "muzzle_long" } ] } ]
   },
   {
     "type": "mutation",

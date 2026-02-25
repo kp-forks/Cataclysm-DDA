@@ -77,8 +77,12 @@ jobs:
         cmake -B build \
           -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
           -DCMAKE_CXX_COMPILER=$COMPILER \
-          -DCMAKE_BUILD_TYPE=Release .
-        make includes -j4 --silent
+          -DCMAKE_BUILD_TYPE=Release \
+          -DTILES=${TILES:-0} \
+          -DSOUND=${SOUND:-0} \
+          -DLOCALIZE=${LOCALIZE:-0} \
+          .
+        make includes -j4 --silent TILES=${TILES:-0} SOUND=${SOUND:-0} LOCALIZE=${LOCALIZE:-0}
 
     - name: run IWYU and apply fixes
       run: |

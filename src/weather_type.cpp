@@ -1,7 +1,5 @@
 #include "weather_type.h"
 
-#include <deque>
-
 #include "condition.h"
 #include "debug.h"
 #include "flexbuffer_json.h"

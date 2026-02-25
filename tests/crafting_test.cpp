@@ -34,6 +34,7 @@
 #include "map.h"
 #include "map_helpers.h"
 #include "map_selector.h"
+#include "options_helpers.h"
 #include "mapdata.h"
 #include "npc.h"
 #include "output.h"
@@ -58,6 +59,7 @@
 #include "vehicle.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
+#include "weather_type.h"
 
 static const activity_id ACT_CRAFT( "ACT_CRAFT" );
 
@@ -67,6 +69,7 @@ static const flag_id json_flag_ITEM_BROKEN( "ITEM_BROKEN" );
 static const flag_id json_flag_USE_UPS( "USE_UPS" );
 
 static const furn_str_id furn_f_smoking_rack( "f_smoking_rack" );
+static const furn_str_id furn_f_solar_cooker( "f_solar_cooker" );
 
 static const itype_id itype_2x4( "2x4" );
 static const itype_id itype_UPS_ON( "UPS_ON" );
@@ -90,6 +93,7 @@ static const itype_id itype_debug_backpack( "debug_backpack" );
 static const itype_id itype_dehydrator( "dehydrator" );
 static const itype_id itype_eink_tablet_pc( "eink_tablet_pc" );
 static const itype_id itype_fake_anvil( "fake_anvil" );
+static const itype_id itype_fake_solar_cooker( "fake_solar_cooker" );
 static const itype_id itype_hacksaw( "hacksaw" );
 static const itype_id itype_hammer( "hammer" );
 static const itype_id itype_heavy_atomic_battery_cell( "heavy_atomic_battery_cell" );
@@ -2471,6 +2475,66 @@ TEST_CASE( "pseudo_tools_in_crafting_inventory", "[crafting][tools]" )
                         CHECK( rack.ammo_remaining( ) == 300 );
                     }
                 }
+            }
+        }
+        clear_map_without_vision();
+    }
+    GIVEN( "a deployed solar cooker" ) {
+        REQUIRE( here.furn_set( furn1_pos, furn_f_solar_cooker ) );
+
+        WHEN( "it is a clear day with sufficient sunlight" ) {
+            scoped_weather_override weather_clear( WEATHER_CLEAR );
+            set_time( calendar::turn_zero + 12_hours );
+            REQUIRE( here.is_outside( furn1_pos ) );
+
+            THEN( "crafting inventory contains the solar cooker pseudo-tool" ) {
+                player.invalidate_crafting_inventory();
+                CHECK( player.crafting_inventory().count_item( itype_fake_solar_cooker ) == 1 );
+            }
+        }
+
+        WHEN( "it is nighttime" ) {
+            scoped_weather_override weather_clear( WEATHER_CLEAR );
+            set_time( calendar::turn_zero );
+
+            THEN( "crafting inventory does NOT contain the solar cooker pseudo-tool" ) {
+                player.invalidate_crafting_inventory();
+                CHECK( player.crafting_inventory().count_item( itype_fake_solar_cooker ) == 0 );
+            }
+        }
+
+        WHEN( "the tile is indoors" ) {
+            const ter_id ter_concrete_wall( "t_concrete_wall" );
+            const ter_id ter_concrete_floor( "t_thconc_floor" );
+            const ter_id ter_flat_roof( "t_flat_roof" );
+            // Build a 5x5 walled room with floor inside and roof above
+            for( const tripoint_bub_ms &pt : points_in_radius( furn1_pos, 2 ) ) {
+                if( square_dist( pt, furn1_pos ) == 2 ) {
+                    REQUIRE( here.ter_set( pt, ter_concrete_wall ) );
+                }
+            }
+            for( const tripoint_bub_ms &pt : points_in_radius( furn1_pos, 1 ) ) {
+                if( pt != furn1_pos ) {
+                    REQUIRE( here.ter_set( pt, ter_concrete_wall ) );
+                } else {
+                    REQUIRE( here.ter_set( pt, ter_concrete_floor ) );
+                }
+            }
+            for( const tripoint_bub_ms &pt : points_in_radius( furn1_pos + tripoint::above, 2 ) ) {
+                REQUIRE( here.ter_set( pt, ter_flat_roof ) );
+            }
+            // Re-place the furniture on the floor
+            REQUIRE( here.furn_set( furn1_pos, furn_f_solar_cooker ) );
+            here.set_outside_cache_dirty( furn1_pos.z() );
+            here.build_outside_cache( furn1_pos.z() );
+            REQUIRE_FALSE( here.is_outside( furn1_pos ) );
+
+            scoped_weather_override weather_clear( WEATHER_CLEAR );
+            set_time( calendar::turn_zero + 12_hours );
+
+            THEN( "crafting inventory does NOT contain the solar cooker pseudo-tool" ) {
+                player.invalidate_crafting_inventory();
+                CHECK( player.crafting_inventory().count_item( itype_fake_solar_cooker ) == 0 );
             }
         }
         clear_map_without_vision();

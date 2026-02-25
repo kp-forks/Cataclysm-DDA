@@ -129,6 +129,7 @@ static const itype_id itype_fur( "fur" );
 static const itype_id itype_leather( "leather" );
 static const itype_id itype_sheet_cotton( "sheet_cotton" );
 
+static const json_character_flag json_flag_BLOCK_HUGE_ATTACKS( "BLOCK_HUGE_ATTACKS" );
 static const json_character_flag json_flag_CANNOT_ATTACK( "CANNOT_ATTACK" );
 static const json_character_flag json_flag_CANNOT_MOVE( "CANNOT_MOVE" );
 static const json_character_flag json_flag_CANNOT_TAKE_DAMAGE( "CANNOT_TAKE_DAMAGE" );
@@ -2032,6 +2033,11 @@ bool Character::block_hit( Creature *source, bodypart_id &bp_hit, damage_instanc
     if( get_stamina() < 2000 ) {
         add_msg_if_player( m_warning,
                            _( "You're close to exhaustion and cannot block effectively." ) );
+        return false;
+    }
+
+    // Can't block attacks from attackers two sizes greater than you
+    if( ( get_size() + 1 < source->get_size() ) && !has_flag( json_flag_BLOCK_HUGE_ATTACKS ) ) {
         return false;
     }
 

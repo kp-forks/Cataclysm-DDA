@@ -48,17 +48,53 @@
     "type": "talk_topic",
     "dynamic_line": {
       "compare_string": [ "yes", { "u_val": "robofac_pat_chatting_on_radio" } ],
-      "yes": "&You boot up your radio unit and chirp Pat on the normal frequency.  After a short moment, Pat chirps back.  \"Pat heah, ovah.\"",
-      "no": [
-        "Hi.",
-        "How's it goin'?",
-        "Yo.",
-        "Whatsup?",
-        "They nod their head in greeting.",
-        "They tilt their head up in greeting.",
-        "Hey, howahyah.",
-        "What's doin'?"
-      ]
+      "yes": {
+        "compare_string": [ "yes", { "u_val": "robofac_pat_knows_u_cyborg" } ],
+        "yes": [
+          "&You boot up your radio unit and chirp Pat on the normal frequency.  After a short moment, Pat chirps back.  \"Pat heah, ovah.\"",
+          "&You boot up your radio unit and chirp Pat on the normal frequency.  After a short moment, Pat chirps back.  \"Pat ta' Tin Man, ovah.\"",
+          "&You boot up your radio unit and chirp Pat on the normal frequency.  After a short moment, Pat chirps back.  \"Pat ta' Wi-Fi, ovah.\"",
+          "&You boot up your radio unit and chirp Pat on the normal frequency.  After a short moment, Pat chirps back.  \"Pat heah.  How's it hummin'?  Ovah.\"",
+          "&You boot up your radio unit and chirp Pat on the normal frequency.  After a short moment, Pat chirps back.  \"Pat ta' Bluetooth, ovah.\"",
+          "&You boot up your radio unit and chirp Pat on the normal frequency.  After a short moment, Pat chirps back.  \"Pat ta' Robocawp, ovah.\"",
+          "&You boot up your radio unit and chirp Pat on the normal frequency.  After a short moment, Pat chirps back.  \"Beep boop beep boop, it's me, ya' human pal, ovah.\"",
+          "&You boot up your radio unit and chirp Pat on the normal frequency.  After a short moment, Pat chirps back.  \"Pat ta' Toastah, ovah.\"",
+          "&You boot up your radio unit and chirp Pat on the normal frequency.  After a short moment, Pat chirps back.  \"Pat heah.  Gettin' some interference.  Ya' clean your circuits lately?  Ovah.\"",
+          "&You boot up your radio unit and chirp Pat on the normal frequency.  After a short moment, Pat chirps back.  \"Pat heah.  Sound off if ya' ain't been abducted by ya' robot cousins, yet.  Ovah.\""
+        ],
+        "no": "&You boot up your radio unit and chirp Pat on the normal frequency.  After a short moment, Pat chirps back.  \"Pat heah, ovah.\""
+      },
+      "no": {
+        "compare_string": [ "yes", { "u_val": "robofac_pat_knows_u_cyborg" } ],
+        "yes": [
+          "Heya, Tin Man.",
+          "What's up, Wi-Fi?",
+          "How's it hummin'?",
+          "Yo, Bluetooth!",
+          "Woah, easy there, Robocawp.  It's just me, hah!",
+          "Beep boop.  That's 'hi' in robot, yeah?",
+          "How ya' doin', Toastah?",
+          "How ya' livin', Half-Price Terminatah?",
+          "Hi.",
+          "How's it goin'?",
+          "Yo.",
+          "Whatsup?",
+          "They nod their head in greeting.",
+          "They tilt their head up in greeting.",
+          "Hey, howahyah.",
+          "What's doin'?"
+        ],
+        "no": [
+          "Hi.",
+          "How's it goin'?",
+          "Yo.",
+          "Whatsup?",
+          "They nod their head in greeting.",
+          "They tilt their head up in greeting.",
+          "Hey, howahyah.",
+          "What's doin'?"
+        ]
+      }
     },
     "responses": [
       {
@@ -199,6 +235,32 @@
             { "math": [ "time_since(robofac_timer_waiting_on_pat) >= time('14 d')" ] }
           ]
         }
+      },
+      {
+        "text": "So, no easy way to say this, but I let some robots turn me into a cyborg.  Pretty cool, yeah?",
+        "topic": "TALK_ROBOFAC_MERC_PAT_TELL_U_CYBORG",
+        "condition": {
+          "and": [
+            { "u_has_trait": "CBM_Interface" },
+            { "not": { "compare_string": [ "yes", { "u_val": "robofac_pat_knows_u_cyborg" } ] } },
+            { "compare_string": [ "yes", { "u_val": "robofac_pat_gave_gear" } ] }
+          ]
+        },
+        "effect": { "u_add_var": "robofac_pat_knows_u_cyborg", "value": "yes" }
+      },
+      {
+        "text": "So, remember that whole cyborg thing?  I managed to get an AR system implanted.  Think we can use it to communicate and share info?",
+        "topic": "TALK_ROBOFAC_MERC_PAT_TELL_U_CYBORG_EXODII_AR",
+        "condition": {
+          "and": [
+            { "u_has_trait": "CBM_Interface" },
+            { "u_has_items": { "item": "integrated_ar", "count": 1 } },
+            { "compare_string": [ "yes", { "u_val": "robofac_pat_knows_u_cyborg" } ] },
+            { "not": { "compare_string": [ "yes", { "u_val": "robofac_pat_said_no_to_exodii_AR_CBM" } ] } },
+            { "compare_string": [ "yes", { "u_val": "robofac_pat_gave_gear" } ] }
+          ]
+        },
+        "effect": { "u_add_var": "robofac_pat_said_no_to_exodii_AR_CBM", "value": "yes" }
       },
       {
         "text": "Hey, check out this military-grade AR unit.  Think we can do something with it?",
@@ -889,6 +951,11 @@
           "and": [ { "u_has_mission": "MISSION_ROBOFAC_INTERCOM_CHOP_SHOP" }, { "u_has_mission": "EXODII_MISSION_CHOP_SHOP" } ]
         }
       },
+      {
+        "text": "So, hunting a third robot for our employer.  One of those Exodii, this time…",
+        "topic": "TALK_ROBOFAC_MERC_PAT_ADVICE_MISSION_CIRCUIT_SAFARI",
+        "condition": { "and": [ { "u_has_mission": "MISSION_ROBOFAC_INTERCOM_CIRCUIT_SAFARI" } ] }
+      },
       { "text": "That's all.  See you around.", "topic": "TALK_DONE" }
     ]
   },
@@ -1351,6 +1418,66 @@
     "responses": [ { "text": "Thanks, Pat.", "topic": "TALK_ROBOFAC_MERC_PAT_ADVICE" } ]
   },
   {
+    "type": "talk_topic",
+    "id": "TALK_ROBOFAC_MERC_PAT_ADVICE_MISSION_CIRCUIT_SAFARI",
+    "dynamic_line": {
+      "compare_string": [ "yes", { "u_val": "robofac_pat_gave_circuit_safari_intel" } ],
+      "yes": "Like I said befoah, you're doin' the whole damn world a favor.  Good luck.  Flip on ya' AR headset, and I'll keep an eye on ya' from heah.  Try not to end up beepin' when you back up, yeah?",
+      "no": "I been hearin' a lotta chatter 'bout those freakin' robots 'round heah.  Some kid swears the othah day some OTHAH guy saw one'a those busted-ass… pods, or containahs, or whatevah, and one of those tin-can-robot-fucks looked exactly like his buddy - a buddy who disappeared last week.  You ask me, that's shady as hell - I think those metal bastards are snatchin' people and turnin'em into more robots.  Like that Star Trek crap, yah?  The Blorgs, or whatevah.\n\nAnyway, if you're goin' out huntin' one, you're doin' everybody a favah.  And you'd be doing that poor bastard they turned into a friggin' robot a mercy, ya know?  Put'em outta his misery.\n\nActually, kid told me where that one's at.  You want the coordinates?"
+    },
+    "responses": [
+      {
+        "text": "Sure, I think it's worth checking out.  What are the coordinates?",
+        "condition": { "not": { "compare_string": [ "yes", { "u_val": "robofac_pat_gave_circuit_safari_intel" } ] } },
+        "topic": "TALK_ROBOFAC_MERC_PAT_ADVICE_MISSION_CIRCUIT_SAFARI_INTEL"
+      },
+      {
+        "text": "Actually, I've had a bit of experience with the Exodii.  In fact, they installed a bionic implant in my brain, and they made me work to get it.  Don't seem to me the type to abduct people.",
+        "condition": {
+          "and": [
+            { "u_has_trait": "CBM_Interface" },
+            { "not": { "compare_string": [ "yes", { "u_val": "robofac_pat_knows_u_cyborg" } ] } }
+          ]
+        },
+        "effect": { "u_add_var": "robofac_pat_knows_u_cyborg", "value": "yes" },
+        "topic": "TALK_ROBOFAC_MERC_PAT_ADVICE_MISSION_CIRCUIT_SAFARI_TELL_PAT_ABOUT_IMPLANT"
+      },
+      { "text": "I think I got this, but thanks, Pat.", "topic": "TALK_ROBOFAC_MERC_PAT_ADVICE" }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_ROBOFAC_MERC_PAT_ADVICE_MISSION_CIRCUIT_SAFARI_INTEL",
+    "dynamic_line": {
+      "compare_string": [ "yes", { "u_val": "robofac_pat_chatting_on_radio" } ],
+      "yes": "&Your HUD flicks on and low-resolution version of Pat's computer desktop becomes visible.  They drop a pin on your map application.  \"Right heah'.  Make sure ya' leave ya' headset on so I can keep an eye on ya'.  And make sure you don't get yaself turned into a toaster.\"",
+      "no": "&Pat flips open their laptop and wiggles the cable attached to a makeshift battery.  It boots up after a moment and they clack away, scanning an old, offline version of Google maps until they find a dropped pin.  \"Right heah'.  And hey, batteries ain't cheap anymore, so don't come back needin' em.\""
+    },
+    "responses": [
+      {
+        "text": "Thanks, Pat.  Maybe I'll check it out.",
+        "topic": "TALK_ROBOFAC_MERC_PAT_ADVICE",
+        "effect": [
+          { "assign_mission": "MISSION_ROBOFAC_PAT_CIRCUIT_SAFARI_RECON" },
+          { "u_add_var": "robofac_pat_gave_circuit_safari_intel", "value": "yes" }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_ROBOFAC_MERC_PAT_ADVICE_MISSION_CIRCUIT_SAFARI_TELL_PAT_ABOUT_IMPLANT",
+    "dynamic_line": "&Pat chortles.  \"Well, I dunno about all that, but it explains a lot about you, pal, not gonna lie.  In that case, just don't go lettin'em scan that ugly mug'a yours.  World's already sufferin' enough with extra copies of that goin' around, hah!\"",
+    "responses": [
+      {
+        "text": "Hah, will do, Pat.  So, about those coordinates…",
+        "condition": { "not": { "compare_string": [ "yes", { "u_val": "robofac_pat_gave_circuit_safari_intel" } ] } },
+        "topic": "TALK_ROBOFAC_MERC_PAT_ADVICE_MISSION_CIRCUIT_SAFARI_INTEL"
+      },
+      { "text": "Hah, thanks, Pat.  Will do.  See you around.", "topic": "TALK_ROBOFAC_MERC_PAT_ADVICE" }
+    ]
+  },
+  {
     "id": "TALK_PAT_ADVICE_MISSION_ROBOFAC_INTERCOM_MWS_4",
     "type": "talk_topic",
     "dynamic_line": {
@@ -1669,6 +1796,31 @@
     "type": "talk_topic",
     "dynamic_line": "I think this is about as good as my post-apocalyptic engineering will take us, eh?  Unless our employer chips in, or you can dig up one of those cutting-edge military AR units, I think we're S-O-L.",
     "responses": [ { "text": "Yeah, alright.  Maybe sometime in the future.", "topic": "TALK_ROBOFAC_MERC_PAT" } ]
+  },
+  {
+    "id": "TALK_ROBOFAC_MERC_PAT_TELL_U_CYBORG",
+    "type": "talk_topic",
+    "dynamic_line": "Well, no kiddin' huh?  If it wasn't for the whole end'a'the'world thing, I'd call ya' crazy, but this freakin' world keeps gettin' weirder by the day.  On the bright side, maybe you can score some kinda fancy implant so we can ditch the ugly-ass AR glasses, yeah?  Lemme know if ya' find one, nut-ckle-head, hah!  Get it?  Nuts n' bolts.",
+    "responses": [
+      {
+        "text": "Actually, I have an implanted AR system.  Think you could use it?",
+        "topic": "TALK_ROBOFAC_MERC_PAT_TELL_U_CYBORG_EXODII_AR",
+        "condition": { "and": [ { "u_has_items": { "item": "integrated_ar", "count": 1 } }, { "u_has_trait": "CBM_Interface" } ] },
+        "effect": { "u_add_var": "robofac_pat_said_no_to_exodii_AR_CBM", "value": "yes" }
+      },
+      { "text": "Yeah, alright.", "topic": "TALK_ROBOFAC_MERC_PAT" }
+    ]
+  },
+  {
+    "id": "TALK_ROBOFAC_MERC_PAT_TELL_U_CYBORG_EXODII_AR",
+    "type": "talk_topic",
+    "dynamic_line": "Well, I don't see any freakin' plugs on ya', and unless you gone and shoved a Wi-Fi router up ya' ass, I don't see how we're gettin' the software we need on there.  Come back if you get some kind of interface I can work with, and we'll see what's what.",
+    "responses": [
+      {
+        "text": "Yeah, alright.  I'll come back if my bionic interface becomes accessible to you.",
+        "topic": "TALK_ROBOFAC_MERC_PAT"
+      }
+    ]
   },
   {
     "id": "TALK_ROBOFAC_MERC_PAT_MAKE_EARPIECE_MVAS",
@@ -2476,6 +2628,80 @@
       "success": "…",
       "success_lie": "…",
       "failure": "…"
+    }
+  },
+  {
+    "id": "MISSION_ROBOFAC_PAT_CIRCUIT_SAFARI_RECON",
+    "type": "mission_definition",
+    "name": { "str": "Circuit Safari: Pat's Recon" },
+    "description": "Pat talked to a guy who heard about a guy who saw an Exodii that looked like his friend.  If you're lucky, it'll be a worker you can kill and bring back to Hub 01.",
+    "goal": "MGOAL_GO_TO_TYPE",
+    "difficulty": 5,
+    "value": 0,
+    "start": {
+      "assign_mission_target": { "om_terrain": "road_ew", "om_terrain_match_type": "EXACT", "reveal_radius": 2, "random": true, "search_range": 80 },
+      "update_mapgen": { "place_nested": [ { "chunks": [ "mx_exodii_crash_big_1_pat" ], "x": 0, "y": 0 } ] }
+    },
+    "origins": [ "ORIGIN_SECONDARY" ],
+    "has_generic_rewards": false,
+    "dialogue": {
+      "describe": "…",
+      "offer": "…",
+      "accepted": "…",
+      "rejected": "…",
+      "advice": "…",
+      "inquire": "…",
+      "success": "…",
+      "success_lie": "…",
+      "failure": "…"
+    }
+  },
+  {
+    "type": "mapgen",
+    "nested_mapgen_id": "mx_exodii_crash_big_1_pat",
+    "object": {
+      "mapgensize": [ 24, 24 ],
+      "rows": [
+        "        .........       ",
+        "     ...............    ",
+        "   .......,,,,,.......  ",
+        "  .....,,,,,,,,,,.....  ",
+        "  ...,,,,,,,,,,,,,,.... ",
+        " ....,,,;;;;;;;,,,,.... ",
+        " ...,,,;;;;;;;;;,,,,... ",
+        "....,,;;;;;;;;;;,,,,....",
+        "...,,,,;;;||||;;,,,,,...",
+        "...,;,;;|||||;;;;,,,,...",
+        "...,,;;;;||||||;;,,,,...",
+        "...,;,;|||||||;;;,,,,...",
+        "...,,,,;;||||||;,,,,,...",
+        "...,;,,;;|||||;;,,,,,...",
+        "...,,,;;|||||||;;,,,,...",
+        "...,,,,,;;||;;;;,,,,,...",
+        "....,,;,;;;;;;;,,,,,....",
+        " ...,,,,,,;;;;;;;,,,... ",
+        " ....,,,,,;;;;;,,,,.... ",
+        " ....,,,,,,,,,,,,,,.... ",
+        "  .......,,,,,,.......  ",
+        "  ....................  ",
+        "    ................    ",
+        "       ..........       "
+      ],
+      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ],
+      "palettes": [ "exodii_crash_ground_palette" ],
+      "place_nested": [
+        {
+          "chunks": [
+            [ "nest_exodii_crash_building_big_1", 30 ],
+            [ "nest_exodii_crash_building_big_2", 10 ],
+            [ "nest_exodii_crash_building_small_1", 40 ],
+            [ "nest_exodii_crash_building_smashed", 20 ]
+          ],
+          "x": [ 6, 10 ],
+          "y": [ 6, 10 ]
+        },
+        { "chunks": [ [ "nest_exodii_scouts", 20 ], [ "nest_exodii_zombies", 5 ] ], "x": [ 7, 14 ], "y": [ 16, 18 ] }
+      ]
     }
   }
 ]

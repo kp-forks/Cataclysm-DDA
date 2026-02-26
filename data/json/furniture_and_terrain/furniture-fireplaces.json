@@ -225,7 +225,7 @@
     "type": "furniture",
     "id": "f_solar_cooker",
     "name": "parabolic solar cooker",
-    "description": "A polished metal dish on a tripod that concentrates sunlight into a focal point for cooking.  Only works outdoors in direct sunlight.",
+    "description": "A faceted reflector dish on a tripod that concentrates sunlight into a focal point for cooking.  Only works outdoors in strong direct sunlight.",
     "symbol": ")",
     "color": "yellow",
     "move_cost_mod": 2,
@@ -233,14 +233,7 @@
     "required_str": 6,
     "crafting_pseudo_item": "fake_solar_cooker",
     "flags": [ "TRANSPARENT", "PLACE_ITEM", "EASY_DECONSTRUCT", "FLAT_SURF" ],
-    "deployed_item": "solar_cooker",
-    "examine_action": "deployed_furniture",
-    "bash": {
-      "str_min": 6,
-      "str_max": 20,
-      "sound": "metal screeching!",
-      "sound_fail": "clang!",
-      "items": [ { "item": "scrap", "count": [ 2, 4 ] }, { "item": "sheet_metal_small", "count": [ 1, 2 ] } ]
-    }
+    "item": "solar_cooker",
+    "bash": { "str_min": 6, "str_max": 20, "sound": "metal screeching!", "sound_fail": "clang!" }
   }
 ]

@@ -29,7 +29,6 @@
 #include "options.h"
 #include "pocket_type.h"
 #include "point.h"
-#include "weather.h"
 #include "proficiency.h"
 #include "rng.h"
 #include "translations.h"
@@ -37,6 +36,7 @@
 #include "units.h"
 #include "value_ptr.h"
 #include "vpart_position.h"
+#include "weather.h"
 
 static const itype_id itype_acetaminophen( "acetaminophen" );
 static const itype_id itype_aspirin( "aspirin" );
@@ -527,7 +527,7 @@ static bool tile_has_sufficient_sunlight( const map &m, const tripoint_bub_ms &p
         return false;
     }
     const weather_type_id wtype = current_weather( m.get_abs( p ), calendar::turn );
-    return incident_sun_irradiance( wtype, calendar::turn ) > irradiance::low;
+    return incident_sun_irradiance( wtype, calendar::turn ) > irradiance::high;
 }
 
 void inventory::form_from_map( map &m, std::vector<tripoint_bub_ms> pts, const Character *pl,

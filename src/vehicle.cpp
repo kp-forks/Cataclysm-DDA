@@ -6420,7 +6420,7 @@ std::map<item, int> vehicle::prepare_tools( map &here, const vehicle_part &vp ) 
                 continue;
             }
             const weather_type_id wtype = current_weather( pos_abs() );
-            if( incident_sun_irradiance( wtype, calendar::turn ) <= irradiance::low ) {
+            if( incident_sun_irradiance( wtype, calendar::turn ) <= irradiance::high ) {
                 continue;
             }
         }

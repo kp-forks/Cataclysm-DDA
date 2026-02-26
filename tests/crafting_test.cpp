@@ -33,11 +33,13 @@
 #include "itype.h"
 #include "map.h"
 #include "map_helpers.h"
+#include "map_iterator.h"
 #include "map_selector.h"
-#include "options_helpers.h"
 #include "mapdata.h"
 #include "npc.h"
+#include "options_helpers.h"
 #include "output.h"
+#include "overmap_ui.h"
 #include "pimpl.h"
 #include "player_activity.h"
 #include "player_helpers.h"
@@ -194,6 +196,8 @@ static const vpart_id vpart_ap_test_storage_battery( "ap_test_storage_battery" )
 static const vpart_id vpart_water_faucet( "water_faucet" );
 
 static const vproto_id vehicle_prototype_test_rv( "test_rv" );
+
+static const weather_type_id weather_cloudy( "cloudy" );
 
 TEST_CASE( "recipe_subset" )
 {
@@ -2496,6 +2500,17 @@ TEST_CASE( "pseudo_tools_in_crafting_inventory", "[crafting][tools]" )
         WHEN( "it is nighttime" ) {
             scoped_weather_override weather_clear( WEATHER_CLEAR );
             set_time( calendar::turn_zero );
+
+            THEN( "crafting inventory does NOT contain the solar cooker pseudo-tool" ) {
+                player.invalidate_crafting_inventory();
+                CHECK( player.crafting_inventory().count_item( itype_fake_solar_cooker ) == 0 );
+            }
+        }
+
+        WHEN( "it is cloudy" ) {
+            scoped_weather_override weather_overcast( weather_cloudy );
+            set_time( calendar::turn_zero + 12_hours );
+            REQUIRE( here.is_outside( furn1_pos ) );
 
             THEN( "crafting inventory does NOT contain the solar cooker pseudo-tool" ) {
                 player.invalidate_crafting_inventory();

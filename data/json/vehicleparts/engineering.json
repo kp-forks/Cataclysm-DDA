@@ -212,7 +212,7 @@
     "categories": [ "utility" ],
     "color": "yellow",
     "broken_color": "dark_gray",
-    "description": "A parabolic metal dish that concentrates sunlight for cooking.  Only works outdoors in direct sunlight.",
+    "description": "A faceted reflector dish that concentrates sunlight for cooking.  Only works outdoors in strong direct sunlight.",
     "item": "solar_cooker",
     "location": "on_roof",
     "durability": 30,

@@ -356,7 +356,8 @@
                 { "u_has_items": { "item": "HEW_printout_data_cabin_reverb", "count": 1 } },
                 { "u_has_items": { "item": "HEW_printout_data_cabin_reverb_dimension", "count": 1 } },
                 { "u_has_items": { "item": "HEW_printout_data_barricaded_church", "count": 1 } },
-                { "u_has_items": { "item": "HEW_printout_data_morgantown", "count": 1 } }
+                { "u_has_items": { "item": "HEW_printout_data_morgantown", "count": 1 } },
+                { "u_has_items": { "item": "HEW_printout_data_void_spider_lair", "count": 1 } }
               ]
             }
           ]
